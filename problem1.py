@@ -48,10 +48,12 @@ for n in range(m):
 # Evolution of X
 X_sim = np.zeros((6, m))
 X_sim[:, 0] = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]))
+print(X_sim[:, 0])
 
 for n in range(m-1):
-    W = np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2)).reshape(-1, 1)
-    X_sim[:,n+1] = Phi @ X_sim[:,n] + Psi_Z @ Z_sim[:,n] + Psi_W @ W   
+    W = np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2))
+    X_sim[:,n+1] = Phi @ X_sim[:,n] +  Psi_Z @ Z_sim[:,n] + Psi_W @ W
+    
 
 plt.figure()
 plt.plot(X_sim[0, :], X_sim[3, :])
