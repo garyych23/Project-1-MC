@@ -48,7 +48,6 @@ for n in range(m):
 # Evolution of X
 X_sim = np.zeros((6, m))
 X_sim[:, 0] = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]))
-print(X_sim[:, 0])
 
 for n in range(m-1):
     W = np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2))
