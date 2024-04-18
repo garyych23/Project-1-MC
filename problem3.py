@@ -7,14 +7,14 @@ pos_vec_file = open('stations.txt', "r")
 Y_file = open('RSSI-measurements.txt', "r")
 
 # Parameters
-N = 10000
 m = 501
+dt = 0.5
+alpha = 0.6
+sigma = 0.5
+N = 20000
 v = 90
 eta = 3
-dt = .5
-alpha = .6
-sigma = .5
-ssigma = 1.5
+zeta = 1.5
 
 Y = np.zeros((6,m))
 c_l = 0
@@ -31,6 +31,8 @@ for l in pos_vec_file:
     for k in range(6):
         pos_vec[c_l,k] = float(line[k])
     c_l += 1
+    
+print(Y.shape)
 
 P = np.array([[16,1,1,1,1],
               [1,16,1,1,1],
