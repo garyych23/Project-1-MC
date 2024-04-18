@@ -31,8 +31,6 @@ for l in pos_vec_file:
     for k in range(6):
         pos_vec[c_l,k] = float(line[k])
     c_l += 1
-    
-print(Y.shape)
 
 P = np.array([[16,1,1,1,1],
               [1,16,1,1,1],
@@ -53,24 +51,20 @@ Psi_Z = np.block([[np.array([(dt**2)/2, dt, 0]).reshape(-1, 1), np.zeros((3, 1))
 Psi_W = np.block([[np.array([(dt**2)/2, dt, 1]).reshape(-1, 1), np.zeros((3, 1))],
                    [np.zeros((3, 1)), np.array([(dt**2)/2, dt, 1]).reshape(-1, 1)]])
 
-Z = np.array([[0, 0], [3.5, 0], [0, 3.5], [0, -3.5], [-3.5, 0]])
+Z_state = np.array([[0, 0], [3.5, 0], [0, 3.5], [0, -3.5], [-3.5, 0]])
 
 # Sequential importance sampling
 tau = np.zeros((2, m))  # vector of estimates
 
 def findDist(l, x, pos_vec):
-    p = np.array([x[0], x[3]]) - pos_vec[l - 1]
-    dist = np.sqrt(p[:, 0]**2 + p[:, 1]**2)
+    p = np.array([x[0], x[3]]) - np.array([pos_vec[0,l-1], pos_vec[1,l-1]])
+    dist = np.sqrt(p[0]**2 + p[1]**2)
     return dist
 
 def p(x, y):
-    distances = np.array([v - 10 * eta * np.log10(findDist(1, x, pos_vec)),
-                          v - 10 * eta * np.log10(findDist(2, x, pos_vec)),
-                          v - 10 * eta * np.log10(findDist(3, x, pos_vec)),
-                          v - 10 * eta * np.log10(findDist(4, x, pos_vec)),
-                          v - 10 * eta * np.log10(findDist(5, x, pos_vec)),
-                          v - 10 * eta * np.log10(findDist(6, x, pos_vec))])
-    return scipy.stats.multivariate_normal.pdf(y, distances.T, cov=np.eye(6)*sigma**2)
+    values = np.array([y[k]-v+10*eta*np.log10(findDist(k+1,x,pos_vec)) for k in range(len(y))])
+    res = np.array([scipy.stats.norm.pdf(values[k], 0, zeta) for k in range(len(y))])
+    return np.prod(res)
 
 
 part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]), size=N).T
