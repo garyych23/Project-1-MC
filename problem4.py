@@ -18,30 +18,25 @@ N = 10000
 v = 90
 eta = 3
 zeta = 1.5
-
 P = np.array([[16,1,1,1,1],
               [1,16,1,1,1],
               [1,1,16,1,1],
               [1,1,1,16,1],
               [1,1,1,1,16]]) / 20
-
 Phi = np.block([[np.array([[1, dt, (dt**2)/2],
                             [0, 1, dt],
                             [0, 0, alpha]]), np.zeros((3, 3))],
                 [np.zeros((3, 3)), np.array([[1, dt, (dt**2)/2],
                                                [0, 1, dt],
                                                [0, 0, alpha]])]])
-
 Psi_Z = np.block([[np.array([(dt**2)/2, dt, 0]).reshape(-1, 1), np.zeros((3, 1))],
                    [np.zeros((3, 1)), np.array([(dt**2)/2, dt, 0]).reshape(-1, 1)]])
-
 Psi_W = np.block([[np.array([(dt**2)/2, dt, 1]).reshape(-1, 1), np.zeros((3, 1))],
                    [np.zeros((3, 1)), np.array([(dt**2)/2, dt, 1]).reshape(-1, 1)]])
 
 Z_state= np.array([[0, 0], [3.5, 0], [0, 3.5], [0, -3.5], [-3.5, 0]])
 
-
-# load and read data
+# Data processing
 Y = np.zeros((6,m))
 c_l = 0
 for l in Y_file:
@@ -64,7 +59,7 @@ tau = np.zeros((2, m))  # vector of estimates
 def value(x,y,l):
     return y[l]-v+10*eta*np.log10(np.sqrt((x[0]-pos_vec[0,l])**2 + (x[3]-pos_vec[1,l])**2))
 
-# Initialization
+# Initialization of the particles, weights and estimates
 part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]),size=N).T
 wgt_SISR = np.zeros((N,m))
 wgt_SISR[:,0] = np.prod(np.array([scipy.stats.norm.pdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]), axis=0)
@@ -72,21 +67,24 @@ tau[0, 0] = np.sum(part[0, :]*wgt_SISR[:,0])
 tau[1 ,0] = np.sum(part[3, :]*wgt_SISR[:,0])
 
 
-# Propagation of the particles
-def ind_to_state(ind):
-    return Z_state[ind]
+# functions for the Markov chain Z
 
 def indexx(x):
     return np.random.choice(a=range(len(P)), p=P[x,:])
-    
 
+def ind_to_state(ind):
+    return Z_state[ind]
+
+# Initialization of the Markov chain Z
 rng = np.random.default_rng()
 Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
 
+# Initialization of the most probable state
 Z_maxoccur = np.zeros(m)
 Z_maxoccur[0] = np.argmax(np.bincount(Z_index, minlength=5))
 
+# Propagation
 for k in range(1,m):
     ind = np.random.choice(a=range(len(wgt_SISR)), size=N, replace=True, p=wgt_SISR[:,k-1]/np.sum(wgt_SISR[:,k-1]))
     part = part[:,ind]
@@ -98,6 +96,7 @@ for k in range(1,m):
     Z = ind_to_state(Z_index).T
     Z_maxoccur[k] = np.argmax(np.bincount(Z_index, minlength=5))
     
+# Plot the trajectory of the estimates
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
 plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
@@ -105,6 +104,7 @@ plt.xlabel('x1')
 plt.ylabel('x2')
 plt.show()
 
+# Plot the importance-weight distribution
 plt.figure()
 m_vector = [10, 50, 100, 200, 500]
 bin_pos = np.linspace(-400,0,20)
@@ -117,6 +117,7 @@ plt.ylabel('Absolute frequency')
 plt.title('Importance-weight distribution SISR')
 plt.show()
 
+# Plot the most probable state over time
 plt.figure()
 plt.plot(np.arange(0,m),Z_maxoccur,'o')
 plt.xlabel('Time')

@@ -18,30 +18,25 @@ N = 10000
 v = 90
 eta = 3
 zeta = 1.5
-
 P = np.array([[16,1,1,1,1],
               [1,16,1,1,1],
               [1,1,16,1,1],
               [1,1,1,16,1],
               [1,1,1,1,16]]) / 20
-
 Phi = np.block([[np.array([[1, dt, (dt**2)/2],
                             [0, 1, dt],
                             [0, 0, alpha]]), np.zeros((3, 3))],
                 [np.zeros((3, 3)), np.array([[1, dt, (dt**2)/2],
                                                [0, 1, dt],
                                                [0, 0, alpha]])]])
-
 Psi_Z = np.block([[np.array([(dt**2)/2, dt, 0]).reshape(-1, 1), np.zeros((3, 1))],
                    [np.zeros((3, 1)), np.array([(dt**2)/2, dt, 0]).reshape(-1, 1)]])
-
 Psi_W = np.block([[np.array([(dt**2)/2, dt, 1]).reshape(-1, 1), np.zeros((3, 1))],
                    [np.zeros((3, 1)), np.array([(dt**2)/2, dt, 1]).reshape(-1, 1)]])
 
 Z_state= np.array([[0, 0], [3.5, 0], [0, 3.5], [0, -3.5], [-3.5, 0]])
 
-
-# load and read data
+# Data processing
 Y = np.zeros((6,m))
 c_l = 0
 for l in Y_file:
@@ -70,7 +65,7 @@ def exp_and_normalize(log_w):
     w = np.exp(log_w - L)
     return w/np.sum(w)
 
-# Initialization
+# Initialization of the particles, weights and estimates
 part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]),size=N).T
 log_wgt_SIS = np.zeros((N,m))
 normalized_wgt_SIS = np.zeros((N,m))
@@ -79,18 +74,19 @@ normalized_wgt_SIS[:,0] = exp_and_normalize(log_wgt_SIS[:,0])
 tau[0, 0] = np.sum(part[0, :]*normalized_wgt_SIS[:,0])
 tau[1 ,0] = np.sum(part[3, :]*normalized_wgt_SIS[:,0])
 
+# functions for the markov chain Z
+def indexx(x):
+    return np.random.choice(a=range(len(P)), p=P[x,:])
 
-# Propagation of the particles
 def ind_to_state(ind):
     return Z_state[ind]
 
-def indexx(x):
-    return np.random.choice(a=range(len(P)), p=P[x,:])
-    
-
+#Initialization of the markov chain Z
 rng = np.random.default_rng()
 Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
+
+# Propagation 
 for k in range(1,m):
     part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T)
     log_wgt_SIS[:,k] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0) + log_wgt_SIS[:, k-1]
@@ -100,10 +96,13 @@ for k in range(1,m):
     Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
     Z = ind_to_state(Z_index).T
 
+# Compute the ESS at different times
 m_vector = [10, 50, 100, 200, 500]
 CV_square = np.array([N*np.sum((normalized_wgt_SIS[:,m]-1/N)**2) for m in m_vector])
 ESS = N/(1+CV_square)
 print(ESS)
+
+# Plot the trajectory of the estimates
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
 plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
@@ -111,6 +110,7 @@ plt.xlabel('x1')
 plt.ylabel('x2')
 plt.show()
 
+# Plot the importance-weight distribution
 plt.figure()
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
