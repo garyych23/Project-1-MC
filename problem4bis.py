@@ -60,24 +60,16 @@ for l in pos_vec_file:
 
 # Sequential importance sampling
 tau = np.zeros((2, m))  # vector of estimates
-
+    
 def value(x,y,l):
     return y[l]-v+10*eta*np.log10(np.sqrt((x[0]-pos_vec[0,l])**2 + (x[3]-pos_vec[1,l])**2))
 
-def exp_and_normalize(log_w):
-    # with implementation to avoid underflow after the exponential
-    L = np.max(log_w)
-    w = np.exp(log_w - L)
-    return w/np.sum(w)
-
 # Initialization
 part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]),size=N).T
-log_wgt_SIS = np.zeros((N,m))
-normalized_wgt_SIS = np.zeros((N,m))
-log_wgt_SIS[:,0] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]), axis=0)
-normalized_wgt_SIS[:,0] = exp_and_normalize(log_wgt_SIS[:,0])
-tau[0, 0] = np.sum(part[0, :]*normalized_wgt_SIS[:,0])
-tau[1 ,0] = np.sum(part[3, :]*normalized_wgt_SIS[:,0])
+wgt_SISR = np.zeros((N,m))
+wgt_SISR[:,0] = np.prod(np.array([scipy.stats.norm.pdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]), axis=0)
+tau[0, 0] = np.sum(part[0, :]*wgt_SISR[:,0])
+tau[1 ,0] = np.sum(part[3, :]*wgt_SISR[:,0])
 
 
 # Propagation of the particles
@@ -91,19 +83,21 @@ def indexx(x):
 rng = np.random.default_rng()
 Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
+
+Z_maxoccur = np.zeros(m)
+Z_maxoccur[0] = np.argmax(np.bincount(Z_index, minlength=5))
+
 for k in range(1,m):
-    part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T)
-    log_wgt_SIS[:,k] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0) + log_wgt_SIS[:, k-1]
-    normalized_wgt_SIS[:,k] = exp_and_normalize(log_wgt_SIS[:,k])
-    tau[0, k] = np.sum(part[0, :]*normalized_wgt_SIS[:,k])
-    tau[1 ,k] = np.sum(part[3, :]*normalized_wgt_SIS[:,k])
+    ind = np.random.choice(a=range(len(wgt_SISR)), size=N, replace=True, p=wgt_SISR[:,k-1]/np.sum(wgt_SISR[:,k-1]))
+    part = part[:,ind]
+    part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T) 
+    wgt_SISR[:,k] = np.prod(np.array([scipy.stats.norm.pdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0)
+    tau[0, k] = np.sum(part[0, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
+    tau[1 ,k] = np.sum(part[3, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
     Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
     Z = ind_to_state(Z_index).T
-
-m_vector = [10, 50, 100, 200, 500]
-CV_square = np.array([N*np.sum((normalized_wgt_SIS[:,m]-1/N)**2) for m in m_vector])
-ESS = N/(1+CV_square)
-print(ESS)
+    Z_maxoccur[k] = np.argmax(np.bincount(Z_index, minlength=5))
+    
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
 plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
@@ -112,12 +106,23 @@ plt.ylabel('x2')
 plt.show()
 
 plt.figure()
+m_vector = [10, 50, 100, 200, 500]
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
-plt.hist([log_wgt_SIS[:,m] for m in m_vector], 
+plt.hist([np.log(wgt_SISR[:,m]) for m in m_vector], 
          label=['m = '+str(m) for m in m_vector], bins=30) 
 plt.legend()
 plt.xlabel('Importance weights (natural logarithm)')
 plt.ylabel('Absolute frequency')
-plt.title('Importance-weight distribution SIS')
+plt.title('Importance-weight distribution SISR')
+plt.show()
+
+plt.figure()
+plt.plot(np.arange(0,m),Z_maxoccur,'o')
+plt.xlabel('Time')
+plt.ylabel('Most Probable State')
+plt.title('Most Probable State over Time')
+plt.xticks(np.arange(0, m, step=50))
+plt.yticks(np.arange(0, 5))
+plt.grid(True)
 plt.show()
