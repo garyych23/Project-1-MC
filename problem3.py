@@ -75,7 +75,6 @@ part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 2
 log_wgt_SIS = np.zeros((N,m))
 normalized_wgt_SIS = np.zeros((N,m))
 log_wgt_SIS[:,0] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]), axis=0)
-print(log_wgt_SIS[:,0])
 normalized_wgt_SIS[:,0] = exp_and_normalize(log_wgt_SIS[:,0])
 tau[0, 0] = np.sum(part[0, :]*normalized_wgt_SIS[:,0])
 tau[1 ,0] = np.sum(part[3, :]*normalized_wgt_SIS[:,0])
@@ -100,8 +99,11 @@ for k in range(1,m):
     tau[1 ,k] = np.sum(part[3, :]*normalized_wgt_SIS[:,k])
     Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
     Z = ind_to_state(Z_index).T
-    print(np.max(np.abs(normalized_wgt_SIS)))
 
+m_vector = [10, 50, 100, 200, 500]
+CV_square = np.array([N*np.sum((normalized_wgt_SIS[:,m]-1/N)**2) for m in m_vector])
+ESS = N/(1+CV_square)
+print(ESS)
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
 plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='red')
@@ -110,7 +112,6 @@ plt.ylabel('x2')
 plt.show()
 
 plt.figure()
-m_vector = [10, 100, 200, 500]
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
 plt.hist([log_wgt_SIS[:,m] for m in m_vector], 

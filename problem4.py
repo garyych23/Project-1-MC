@@ -83,6 +83,11 @@ def indexx(x):
 rng = np.random.default_rng()
 Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
+
+Z_occur = np.bincount(Z_index, minlength=5)
+Z_maxoccur = np.zeros(m)
+Z_maxoccur[0] = np.argmax(Z_occur)
+
 for k in range(1,m):
     ind = np.random.choice(a=range(len(wgt_SISR)), size=N, replace=True, p=wgt_SISR[:,k-1]/np.sum(wgt_SISR[:,k-1]))
     part = part[:,ind]
@@ -92,17 +97,20 @@ for k in range(1,m):
     tau[1 ,k] = np.sum(part[3, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
     Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
     Z = ind_to_state(Z_index).T
-    print(np.max(np.abs(wgt_SISR)))
+    Z_occur = np.bincount(Z_index, minlength=5)
+    Z_maxoccur[k] = np.argmax(Z_occur)
+
 
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
-plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='red')
+plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
+plt.plot(ind_to_state(np.int64(Z_maxoccur)).T[0], ind_to_state(np.int64(Z_maxoccur)).T[1], '*', color='green')
 plt.xlabel('x1')
 plt.ylabel('x2')
 plt.show()
 
 plt.figure()
-m_vector = [10, 100, 200, 500]
+m_vector = [10, 50, 100, 200, 500]
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
 plt.hist([np.log(wgt_SISR[:,m]) for m in m_vector], 
@@ -111,5 +119,15 @@ plt.legend()
 plt.xlabel('Importance weights (natural logarithm)')
 plt.ylabel('Absolute frequency')
 plt.title('Importance-weight distribution SIS')
+plt.show()
+
+plt.figure()
+plt.plot(np.arange(0,m),Z_maxoccur,'-o')
+plt.xlabel('Time')
+plt.ylabel('Most Probable State')
+plt.title('Most Probable State over Time')
+plt.xticks(np.arange(0, m, step=50))
+plt.yticks(np.arange(0, 5))
+plt.grid(True)
 plt.show()
 
