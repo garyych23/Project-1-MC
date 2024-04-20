@@ -17,7 +17,6 @@ sigma = 0.5
 N = 10000
 v = 90
 eta = 3
-#zeta = 1.5
 
 P = np.array([[16,1,1,1,1],
               [1,16,1,1,1],
@@ -59,7 +58,7 @@ for l in pos_vec_file:
     c_l += 1
 
 ############### Sequential importance sampling ####################
-def sisr(zeta, plot=False):
+def SISR(zeta, plot=False):
     tau = np.zeros((2, m))  # vector of estimates
         
     def value(x,y,l):
@@ -72,61 +71,57 @@ def sisr(zeta, plot=False):
     tau[0, 0] = np.sum(part[0, :]*wgt_SISR[:,0])
     tau[1 ,0] = np.sum(part[3, :]*wgt_SISR[:,0])
 
-
     # Propagation of the particles
-    def ind_to_state(ind):
-        return Z_state[ind]
-
     def indexx(x):
         return np.random.choice(a=range(len(P)), p=P[x,:])
-        
-
+    
+    def ind_to_state(ind):
+        return Z_state[ind]
+    
     rng = np.random.default_rng()
     Z_index = rng.integers(0,5,size=N)
     Z = ind_to_state(Z_index).T
 
-    Z_occur = np.bincount(Z_index, minlength=5)
-    Z_maxoccur = np.zeros(m)
-    Z_maxoccur[0] = np.argmax(Z_occur)
-
-    C_N_SISR = np.sum(wgt_SISR[:,0])/N
+    # C_N_SISR = np.sum(wgt_SISR[:,0])/N
     for k in range(1,m):
         ind = np.random.choice(a=range(len(wgt_SISR)), size=N, replace=True, p=wgt_SISR[:,k-1]/np.sum(wgt_SISR[:,k-1]))
         part = part[:,ind]
         part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T)
         wgt_SISR[:,k] = np.prod(np.array([scipy.stats.norm.pdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0)
+        print("Current iteration:", k, "weights", np.sum(wgt_SISR[:,k]))
         tau[0, k] = np.sum(part[0, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
         tau[1 ,k] = np.sum(part[3, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
         Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
         Z = ind_to_state(Z_index).T
-        Z_occur = np.bincount(Z_index, minlength=5)
-        Z_maxoccur[k] = np.argmax(Z_occur)
-        C_N_SISR = C_N_SISR*np.sum(wgt_SISR[:,k])/N
+        # C_N_SISR = C_N_SISR*np.sum(wgt_SISR[:,k])/N
+        
+    Omega_list = np.sum(wgt_SISR, axis=0)
+    C_N_SISR = (1/N**(m))*np.prod(Omega_list)
+
 
     if plot:
         plt.figure()
         plt.plot(tau[0, :], tau[1, :], '*')
         plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
-        pos=[0,0]
-        for k in range(m):
-            pos = [pos[0] + ind_to_state(np.int64(Z_maxoccur[k])).T[0], pos[1] + ind_to_state(np.int64(Z_maxoccur[k])).T[1]]
-            plt.plot(pos[0], pos[1], '*', color='green')
         plt.xlabel('x1')
         plt.ylabel('x2')
         plt.show()
     
-    return C_N_SISR
+    return np.log(C_N_SISR)/m
 ##################################################################
 
-N_grid = 10
-zeta_grid = np.linspace(start=0.01, stop=3, num=N_grid)
-log_likelihood = np.zeros(N_grid)
-for i in range(N_grid):
-    zeta = zeta_grid[i]
-    print("Current zeta:", zeta)
-    likelihood = sisr(zeta)
-    log_likelihood[i] = np.log(likelihood)/m
+print(SISR(zeta=2))
+# N_grid = 5
+# zeta_grid = np.linspace(start=1.5, stop=3, num=N_grid)
+# normalized_log_likelihood = np.zeros(N_grid)
+# for i in range(N_grid):
+#     zeta = zeta_grid[i]
+#     print("Current zeta:", zeta)
+#     likelihood = SISR(zeta)
+#     normalized_log_likelihood[i] = np.log(likelihood)/m
 
-zeta_hat_ind = np.argmax(log_likelihood)
-zeta_hat = zeta_grid[zeta_hat_ind]
-print("Zeta hat:", sisr(zeta=zeta_hat, plot=True))
+# zeta_hat_ind = np.argmax(normalized_log_likelihood)
+# zeta_hat = zeta_grid[zeta_hat_ind]
+# print(normalized_log_likelihood)
+# print("Zeta hat:", zeta_hat)
+# print(SISR(zeta=zeta_hat, plot=True))
