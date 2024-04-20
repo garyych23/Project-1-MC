@@ -61,21 +61,6 @@ for l in pos_vec_file:
 # Sequential importance sampling
 tau = np.zeros((2, m))  # vector of estimates
 
-def findDist(l, x, pos_vec):
-    p = np.array([x[0], x[3]]) - np.array([pos_vec[0,l-1], pos_vec[1,l-1]])
-    dist = np.sqrt(p[0]**2 + p[1]**2)
-    return dist
-
-def p(x, y):
-    values = np.array([y[k]-v+10*eta*np.log10(findDist(k+1,x,pos_vec)) for k in range(len(y))])
-    res = np.array([scipy.stats.norm.pdf(values[k], 0, zeta) for k in range(len(y))])
-    return np.prod(res)
-
-def logp(x,y):
-    values = np.array([y[k]-v+10*eta*np.log10(findDist(k+1,x,pos_vec)) for k in range(len(y))])
-    res = np.array([scipy.stats.norm.logpdf(values[k], 0, zeta) for k in range(len(y))])
-    return np.sum(res)
-    
 def value(x,y,l):
     return y[l]-v+10*eta*np.log10(np.sqrt((x[0]-pos_vec[0,l])**2 + (x[3]-pos_vec[1,l])**2))
 
@@ -89,7 +74,8 @@ def exp_and_normalize(log_w):
 part = np.random.multivariate_normal(mean=np.zeros(6), cov=np.diag([500, 5, 5, 200, 5, 5]),size=N).T
 log_wgt_SIS = np.zeros((N,m))
 normalized_wgt_SIS = np.zeros((N,m))
-log_wgt_SIS[:,0] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]))
+log_wgt_SIS[:,0] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,0],l), 0, zeta) for l in range(6)]), axis=0)
+print(log_wgt_SIS[:,0])
 normalized_wgt_SIS[:,0] = exp_and_normalize(log_wgt_SIS[:,0])
 tau[0, 0] = np.sum(part[0, :]*normalized_wgt_SIS[:,0])
 tau[1 ,0] = np.sum(part[3, :]*normalized_wgt_SIS[:,0])
@@ -108,7 +94,7 @@ Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
 for k in range(1,m):
     part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T)
-    log_wgt_SIS[:,k] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)])) + log_wgt_SIS[:, k-1]
+    log_wgt_SIS[:,k] = np.sum(np.array([scipy.stats.norm.logpdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0) + log_wgt_SIS[:, k-1]
     normalized_wgt_SIS[:,k] = exp_and_normalize(log_wgt_SIS[:,k])
     tau[0, k] = np.sum(part[0, :]*normalized_wgt_SIS[:,k])
     tau[1 ,k] = np.sum(part[3, :]*normalized_wgt_SIS[:,k])
@@ -124,11 +110,14 @@ plt.ylabel('x2')
 plt.show()
 
 plt.figure()
+m_vector = [10, 100, 200, 500]
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
-plt.hist(log_wgt_SIS[:,100], bins=30)
-plt.xlabel('Importance Weights')
-plt.ylabel('Frequency')
-plt.title('Histogram of Importance Weights')
-plt.show()
+plt.hist([log_wgt_SIS[:,m] for m in m_vector], 
+         label=['m = '+str(m) for m in m_vector], bins=30) 
+plt.legend()
+plt.xlabel('Importance weights (natural logarithm)')
+plt.ylabel('Absolute frequency')
+plt.title('Importance-weight distribution SIS')
 
+plt.show()
