@@ -84,27 +84,23 @@ rng = np.random.default_rng()
 Z_index = rng.integers(0,5,size=N)
 Z = ind_to_state(Z_index).T
 
-Z_occur = np.bincount(Z_index, minlength=5)
 Z_maxoccur = np.zeros(m)
-Z_maxoccur[0] = np.argmax(Z_occur)
+Z_maxoccur[0] = np.argmax(np.bincount(Z_index, minlength=5))
 
 for k in range(1,m):
     ind = np.random.choice(a=range(len(wgt_SISR)), size=N, replace=True, p=wgt_SISR[:,k-1]/np.sum(wgt_SISR[:,k-1]))
     part = part[:,ind]
-    part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T)
+    part = np.dot(Phi,part) + np.dot(Psi_Z,Z) + np.dot(Psi_W,np.random.multivariate_normal(mean=np.zeros(2), cov=sigma**2*np.eye(2), size=N).T) 
     wgt_SISR[:,k] = np.prod(np.array([scipy.stats.norm.pdf(value(part,Y[:,k],l), 0, zeta) for l in range(6)]),axis=0)
     tau[0, k] = np.sum(part[0, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
     tau[1 ,k] = np.sum(part[3, :]*wgt_SISR[:,k])/np.sum(wgt_SISR[:,k])
     Z_index = np.array([indexx(Z_index[l]) for l in range(N)])
     Z = ind_to_state(Z_index).T
-    Z_occur = np.bincount(Z_index, minlength=5)
-    Z_maxoccur[k] = np.argmax(Z_occur)
-
-
+    Z_maxoccur[k] = np.argmax(np.bincount(Z_index, minlength=5))
+    
 plt.figure()
 plt.plot(tau[0, :], tau[1, :], '*')
 plt.plot(pos_vec[0, :], pos_vec[1, :], '*', color='black')
-plt.plot(ind_to_state(np.int64(Z_maxoccur)).T[0], ind_to_state(np.int64(Z_maxoccur)).T[1], '*', color='green')
 plt.xlabel('x1')
 plt.ylabel('x2')
 plt.show()
@@ -118,11 +114,11 @@ plt.hist([np.log(wgt_SISR[:,m]) for m in m_vector],
 plt.legend()
 plt.xlabel('Importance weights (natural logarithm)')
 plt.ylabel('Absolute frequency')
-plt.title('Importance-weight distribution SIS')
+plt.title('Importance-weight distribution SISR')
 plt.show()
 
 plt.figure()
-plt.plot(np.arange(0,m),Z_maxoccur,'-o')
+plt.plot(np.arange(0,m),Z_maxoccur,'o')
 plt.xlabel('Time')
 plt.ylabel('Most Probable State')
 plt.title('Most Probable State over Time')
@@ -130,4 +126,3 @@ plt.xticks(np.arange(0, m, step=50))
 plt.yticks(np.arange(0, 5))
 plt.grid(True)
 plt.show()
-
