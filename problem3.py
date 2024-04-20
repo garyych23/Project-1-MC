@@ -119,5 +119,4 @@ plt.legend()
 plt.xlabel('Importance weights (natural logarithm)')
 plt.ylabel('Absolute frequency')
 plt.title('Importance-weight distribution SIS')
-
 plt.show()
