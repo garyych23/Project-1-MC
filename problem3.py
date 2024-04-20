@@ -126,7 +126,7 @@ plt.show()
 plt.figure()
 bin_pos = np.linspace(-400,0,20)
 H = bin_pos
-plt.hist(log_wgt_SIS[:, -1], bins=30)
+plt.hist(log_wgt_SIS[:,100], bins=30)
 plt.xlabel('Importance Weights')
 plt.ylabel('Frequency')
 plt.title('Histogram of Importance Weights')
