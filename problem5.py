@@ -101,7 +101,7 @@ def sisr(zeta, plot=False):
         Z = ind_to_state(Z_index).T
         Z_occur = np.bincount(Z_index, minlength=5)
         Z_maxoccur[k] = np.argmax(Z_occur)
-        C_N_SISR *= np.sum(wgt_SISR[:,k])/N
+        C_N_SISR = C_N_SISR*np.sum(wgt_SISR[:,k])/N
 
     if plot:
         plt.figure()
@@ -119,11 +119,14 @@ def sisr(zeta, plot=False):
 ##################################################################
 
 N_grid = 10
-zeta_grid = np.linspace(start=0, stop=3, num=N_grid)
-likelihood_array= np.zeros(N_grid)
-zeta_hat = 0
+zeta_grid = np.linspace(start=0.01, stop=3, num=N_grid)
+log_likelihood = np.zeros(N_grid)
 for i in range(N_grid):
     zeta = zeta_grid[i]
+    print("Current zeta:", zeta)
     likelihood = sisr(zeta)
-    log_likelihood[i] = likelihood[i]/m
-    if zeta_hat
+    log_likelihood[i] = np.log(likelihood)/m
+
+zeta_hat_ind = np.argmax(log_likelihood)
+zeta_hat = zeta_grid[zeta_hat_ind]
+print("Zeta hat:", sisr(zeta=zeta_hat, plot=True))
