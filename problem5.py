@@ -92,7 +92,9 @@ def SISR(zeta, plot=False):
     
     # Compute the estimate of the likelihood 
     Omega_list = np.sum(wgt_SISR, axis=0)
-    C_N_SISR = (1/N**(m))*np.prod(Omega_list)
+    # C_N_SISR = (1/N**(m))*np.prod(Omega_list) : too small
+    log_C_N_SISR = np.sum(np.log(Omega_list))
+    log_C_N_SISR = log_C_N_SISR - m*np.log(N)
     
     # Plot the trajectory of the estimates
     if plot:
@@ -104,6 +106,19 @@ def SISR(zeta, plot=False):
         plt.show()
     
     # Return the estimate of the normalized log likelihood
-    return np.log(C_N_SISR)/m
+    return log_C_N_SISR/m
 
+N_grid = 5
+zeta_grid = np.linspace(start=0.3, stop=3, num=N_grid)
+normalized_log_likelihood = np.zeros(N_grid)
+for i in range(N_grid):
+    zeta = zeta_grid[i]
+    print("Current zeta:", zeta)
+    normalized_log_likelihood[i] = SISR(zeta)
+    print("Associated log likelihood:", normalized_log_likelihood[i])
 
+zeta_hat_ind = np.argmax(normalized_log_likelihood)
+zeta_hat = zeta_grid[zeta_hat_ind]
+print("Zeta hat:", zeta_hat)
+print("Best associated log likelihood:", normalized_log_likelihood[zeta_hat_ind])
+SISR(zeta=zeta_hat, plot=True)
